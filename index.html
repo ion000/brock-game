@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>ブロック崩し</title>
+    <style>
+      html {
+        font-family: sans-serif;
+      }
+      body {
+        width: 50%;
+        max-width: 800px;
+        min-width: 480px;
+        margin: 0 auto;
+      }
+      .lastResult {
+        color: white;
+        padding: 3px;
+      }
+
+      *{ padding: 0; margin: 0;}
+      canvas{background: #eee; display: block; margin: 0 auto;}
+      
+      #btn_right {
+        color: white;
+        background: red;
+        border: none;
+        border-radius: 10%;
+        width: 200px;
+        height: 120px;
+        float: right;
+        margin-top: 20px;
+        font-size: 100px;
+      }
+
+      #btn_left {
+        color: white;
+        background: rgb(25, 0, 255);
+        border: none;
+        border-radius: 10%;
+        width: 200px;
+        height: 120px;
+        float: left;
+        margin-top: 20px;
+        font-size: 100px;
+      }
+
+      #btn_start {
+        width: 100px;
+        height: 50px;
+        margin-top: 20px;
+        margin-right: 30px;
+        margin-bottom: 20px;
+      }
+
+      #btn_reset {
+        width: 100px;
+        height: 50px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <h1>ブロック崩し</h1>
+    <form name="form1">  
+      <select id="level"　name="level">
+          <option value=1>レベル１</option>
+          <option value=2>レベル２</option>
+          <option value=3>レベル３</option>
+      </select>
+    </form>
+
+    <button id="btn_start">スタート</button>
+    <button id="btn_reset">リセット</button>
+    <canvas id="myCanvas" width="480" height="320"></canvas>
+
+    <button id="btn_left" onmousedown="down2();" onmouseup="up();">
+      ←
+    </button>
+
+    <button id="btn_right" onmousedown="down1();" onmouseup="up();">
+      →
+    </button>
+
+
+    <script>
+      // <canvas>要素への参照をcanvasに保存している
+      var canvas = document.getElementById("myCanvas");
+      // "ctx"という変数を設定している。2D描画コンテキストは実際にCanvasに描画するために使うツール
+      var ctx = canvas.getContext("2d");
+      var btn_start = document.getElementById('btn_start');
+      var btn_reset = document.getElementById('btn_reset');
+      var x = canvas.width/2;
+      var y = canvas.height-30;
+      var dx =2;
+      var dy = -2;
+      var ballRadius = 10;
+      var paddleHeight = 10;
+      var paddleWidth = 75;
+      var paddleX = (canvas.width-paddleWidth)/2;
+      var rightPressed = false;
+      var leftPressed = false;
+      var brickRowCount;
+      var brickColumCount = 5;
+      var brickWidth = 75;
+      var brickHeight = 20;
+      var brickPadding = 10;
+      var brickOffsetTop = 30;
+      var brickOffsetLeft = 30;
+      var score = 0;
+      var lives = 3;
+      var bricks = [];
+
+      var down1 = function() {
+        rightPressed = true;
+      }
+      var down2 = function() {
+        leftPressed = true;
+      }
+
+      var up = function() {
+        document.body.style.backgroundColor = "";
+        document.body.style.transition = "2s";
+        rightPressed = false;
+        leftPressed = false;
+      }
+
+      
+      document.addEventListener("keydown",keyDownHandler,false);
+      document.addEventListener("keyup",keyUpHandler,false);
+      //document.addEventListener("mousemove", mouseMoveHandler,false);
+
+      //function mouseMoveHandler(e){
+        //var relactiveX = e.clientX - canvas.offsetLeft;
+        //if(relactiveX > 0 && relactiveX < canvas.width){
+          //paddleX = relactiveX - paddleWidth/2;
+        //}
+      //}
+
+      function keyDownHandler(e){
+        if(e.key == "Right" || e.key == "ArrowRight" || e.key == "right"){
+          rightPressed = true;
+        }
+        else if(e.key == "Left" || e.key == "ArrowLeft") {
+          leftPressed = true;
+        }
+      }
+
+      function keyUpHandler(e){
+        if(e.key == "Right" || e.key == "ArrowRight"){
+          rightPressed = false;
+        }
+        else if(e.key == "Left" || e.key == "ArrowLeft"){
+          leftPressed = false;
+        }
+      }
+
+      //衝突検出関数
+      function collisionDetection(){
+        for(var c=0;c<brickColumCount;c++){
+          for(var r=0;r<brickRowCount;r++){
+            var b=bricks[c][r];
+            if(b.status == 1){
+              if(x>b.x && x<b.x+brickWidth && y>b.y && y<b.y+brickHeight){
+                dy = -dy;
+                b.status = 0;
+                score++;
+                if(score == brickRowCount*brickColumCount){
+                  alert("おめでとう！！!");
+                  document.location.reload();
+                }
+              }
+            }
+          }
+        }
+      }
+
+      //スコアを表示する関数
+      function drawScore(){
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#0095DD";
+        ctx.fillText("Score:"+score, 8, 20);
+      }
+
+      //残機を表示する
+      function drawLives(){
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#0085DD";
+        ctx.fillText("残機:"+lives, canvas.width-65, 20);
+      }
+
+      function drawnball(){
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+        // ctx.fillStyle = "green";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function drawPaddle(){
+        ctx.beginPath();
+        ctx.rect(paddleX,canvas.height-paddleHeight,paddleWidth,paddleHeight);
+        ctx.fillStyle="#0095DD";
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function drawBricks(){
+        for(var c=0;c<brickColumCount;c++){
+          for(var r=0;r<brickRowCount;r++){
+            if(bricks[c][r].status == 1){
+              var brickX = (c*(brickWidth+brickPadding))+brickOffsetLeft;
+              var brickY = (r*(brickHeight+brickPadding))+brickOffsetTop;
+              bricks[c][r].x=brickX;
+              bricks[c][r].y=brickY;
+              ctx.beginPath();
+              ctx.rect(brickX,brickY,brickWidth,brickHeight);
+              ctx.fillStyle="#0095DD";
+              ctx.fill();
+              ctx.closePath();
+            }
+          }
+        }
+      }
+
+      // 描画関数 draw()は10msごとに呼び出される
+      function draw(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        drawBricks();
+        drawnball();
+        drawPaddle();
+        drawScore();
+        drawLives();
+        collisionDetection();
+        x += dx; //ｘ+(dx/10ms)
+        y += dy;
+        if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
+          dx = -dx;
+        }
+        if(y + dy < ballRadius) {
+          dy = -dy;
+        }else if(y + dy >canvas.height){
+          // もしボールが下に来てパドルの幅の範囲だったら
+          if(x > paddleX && x < paddleX + paddleWidth){
+            dy = -dy;  
+          }
+          else{
+            lives--;
+            if(!lives){
+              alert("GAME OVER");
+              document.location.reload();
+            }
+            else{
+              x = canvas.width/2;
+              y = canvas.height-30;
+              dx = 2;
+              dy = -2;
+              paddleX = (canvas.width-paddleWidth)/2;
+            }
+          }  
+        }
+        if(rightPressed && paddleX < canvas.width-paddleWidth){
+          paddleX += 7;
+        }
+        else if(leftPressed && paddleX > 0) {
+          paddleX -= 7;
+        }
+      }
+
+      function start(){
+        const level = document.form1.level;
+        const num = document.form1.level.selectedIndex + 1;
+        brickRowCount = num*2
+        for(var c=0;c<brickColumCount;c++){
+          bricks[c] = [];
+          for(var r=0;r<brickRowCount;r++){
+            bricks[c][r] = {x:0,y:0,status:1};
+          }
+        }
+        // draw()を10msおきにずっと呼び出す
+        var interval = setInterval(draw,10);
+      }
+
+      function reset(){
+        document.location.reload();
+      }
+
+      btn_start.addEventListener('click', start);
+      btn_reset.addEventListener('click', reset);
+
+    </script>
+  </body>
+</html>

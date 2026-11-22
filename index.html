@@ -361,7 +361,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ===================== ステージ =====================
-// . 空  1-6 ガラス  H すりガラス(2回)  S 厚いガラス(3回)  X 金属(破壊不可)
+// . 空  1-6 通常  H すりガラス(2回)  S 厚いガラス(3回)  X 金属(破壊不可)
 const LEVELS = [
   { name: 'はじまり', rows: ['............', '111111111111', '222222222222', '333333333333', '444444444444', '555555555555'] },
   { name: 'ピラミッド', rows: ['.....HH.....', '....1111....', '...222222...', '..33333333..', '.4444444444.', '555555555555', '666666666666'] },
@@ -449,6 +449,7 @@ const Sound = {
     src.connect(f).connect(g).connect(this.ctx.destination);
     src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
   },
+  brick(combo) { this.tone(520 + Math.min(combo, 16) * 45, 0.07, 'square', 0.04); },
   // ガラスが割れる音: 高音のノイズ＋ランダムなチリンという響き
   glassBreak(combo) {
     const up = 1 + Math.min(combo, 12) * 0.04;
@@ -942,10 +943,15 @@ function hitBrick(br, fromBall) {
   const pts = BRICK_POINTS[br.type] * mult;
   score += pts;
   const cx = br.x + br.w / 2, cy = br.y + br.h / 2;
-  spawnShards(br, 14);
-  spawnParticles(cx, cy, '#ffffff', 6, 120);
+  if (br.maxHp > 1) {
+    spawnShards(br, 14);
+    spawnParticles(cx, cy, '#ffffff', 6, 120);
+    Sound.glassBreak(combo);
+  } else {
+    spawnParticles(cx, cy, BRICK_COLORS[br.type][0], 16);
+    Sound.brick(combo);
+  }
   floatText(cx, cy, mult > 1 ? `+${pts} ×${mult}` : `+${pts}`, mult > 1 ? '#ffd166' : '#fff');
-  Sound.glassBreak(combo);
   if (Math.random() < DROP_CHANCE) drops.push({ x: cx, y: cy, type: randomPowerup(), vy: 140, rot: 0 });
   if (!bricks.some(b => b.type !== 'X')) levelCleared();
   return true;
@@ -1235,6 +1241,24 @@ function drawMetal(br, x, y, w, h) {
   }
 }
 
+// 通常ブロック（1回で壊れる）
+function drawSolid(br, x, y, w, h) {
+  const [c1, c2] = BRICK_COLORS[br.type];
+  const g = ctx.createLinearGradient(x, y, x + w * 0.3, y + h);
+  g.addColorStop(0, c1);
+  g.addColorStop(1, c2);
+  ctx.fillStyle = g;
+  rr(x, y, w, h, 6);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  rr(x + 4, y + 2.5, w - 8, 2.5, 1.25); ctx.fill();
+  if (br.flash > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${br.flash / 0.15 * 0.75})`;
+    rr(x, y, w, h, 6); ctx.fill();
+  }
+}
+
+// 2〜3回当てるブロック（ガラス）
 function drawGlass(br, x, y, w, h) {
   const [tr, tg, tb] = hexRgb(BRICK_COLORS[br.type][0]);
   const [er, eg, eb] = hexRgb(BRICK_COLORS[br.type][1]);
@@ -1316,7 +1340,8 @@ function drawBricks() {
     const y = br.y + pad - (1 - br.alpha) * 12;
     ctx.globalAlpha = br.alpha;
     if (br.type === 'X') drawMetal(br, x, y, w, h);
-    else drawGlass(br, x, y, w, h);
+    else if (br.maxHp > 1) drawGlass(br, x, y, w, h);
+    else drawSolid(br, x, y, w, h);
   }
   ctx.globalAlpha = 1;
 }
